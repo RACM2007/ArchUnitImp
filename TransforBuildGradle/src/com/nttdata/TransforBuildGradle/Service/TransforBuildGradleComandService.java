@@ -53,7 +53,6 @@ public class TransforBuildGradleComandService {
             builder.command("bash", "-c", comando);
         }
         
-        builder.command("cmd", "/c", comando);
         builder.directory(new File(directorio));
         Process proceso = builder.start();
         int resultado = proceso.waitFor();

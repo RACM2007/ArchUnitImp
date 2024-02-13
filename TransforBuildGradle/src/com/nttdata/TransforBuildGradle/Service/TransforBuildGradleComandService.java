@@ -37,11 +37,6 @@ public class TransforBuildGradleComandService {
             }
             
             
-            
-            
-            
-            
-            
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }

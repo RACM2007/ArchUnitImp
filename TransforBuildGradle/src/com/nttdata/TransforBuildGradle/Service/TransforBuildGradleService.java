@@ -60,6 +60,10 @@ public class TransforBuildGradleService {
     
         boolean respuesta = true;
         
+        if (validarVersion1x(ubi, param)){
+            return false;
+        }
+        
         respuesta = modBuildGradle(ubi, param);
         
         respuesta = modTestGradle(ubi);
@@ -67,6 +71,31 @@ public class TransforBuildGradleService {
         respuesta = modSuiteTest(ubi);
         
         return respuesta;
+    }
+    
+    public static boolean validarVersion1x(String ubi, Parametros param) throws IOException {
+        //Encontrar archivo build.gradle
+        File arBuildGradle = validarBuildGradle(ubi, "build.gradle");
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(new File(ubi)))) {
+            String linea;
+            while ((linea = br.readLine()) != null) {
+                if (linea.trim().startsWith("springBootVersion")) {
+                    String[] partes = linea.split("\\s+");
+                    for (String parte : partes) {
+                        if (parte.contains("1.")) {
+                            return false;
+                        }
+                    }
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    
+        return true;
+        
     }
     
     public static void actualizaImports(File archivoBuildGradle) throws IOException {

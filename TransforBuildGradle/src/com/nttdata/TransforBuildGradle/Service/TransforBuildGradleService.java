@@ -1,5 +1,6 @@
 package com.nttdata.TransforBuildGradle.Service;
 
+import com.nttdata.TransforBuildGradle.model.Parametros;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -18,7 +19,7 @@ public class TransforBuildGradleService {
 
     public static TransforBuildGradleComandService modelCom = new TransforBuildGradleComandService();
     
-    public boolean procesar(String ubiTextRepo) {
+    public boolean procesar(String ubiTextRepo, Parametros param) {
        
         File archivo = new File(ubiTextRepo);
         boolean respuesta= true;
@@ -32,15 +33,20 @@ public class TransforBuildGradleService {
             String linea;
             while ((linea = br.readLine()) != null) {
                 
-                respuesta= modificaciones(linea);
-                
-                if (respuesta) {
-                    modelCom.ejeComand(linea);
+                if (linea.startsWith("xxx")) {
+                    System.out.println("ERROR"+ linea);
                 }else{
-                    return false;
-                }
                 
-                System.out.println(linea);
+                    respuesta= modificaciones(linea, param);
+
+                    if (respuesta) {
+                        modelCom.ejeComand(linea, param.getSO());
+                    }else{
+                        return false;
+                    }
+
+                    System.out.println("Comandos ejecutados"+linea);
+                }
             }
         } catch (IOException e) {
             System.out.println("Ocurrió un error al leer el archivo: " + e.getMessage());
@@ -50,13 +56,11 @@ public class TransforBuildGradleService {
         
     }
 
-    
-    
-    public boolean modificaciones(String ubi) throws IOException {
+    public boolean modificaciones(String ubi, Parametros param) throws IOException {
     
         boolean respuesta = true;
         
-        respuesta = modBuildGradle(ubi);
+        respuesta = modBuildGradle(ubi, param);
         
         respuesta = modTestGradle(ubi);
         
@@ -66,13 +70,12 @@ public class TransforBuildGradleService {
     }
     
     public static void actualizaImports(File archivoBuildGradle) throws IOException {
-        String versionSpringBoot = identificarVersionSpringBoot(archivoBuildGradle);
-        String limite = "2.7";
-        
-        if (versionSpringBoot != null && esVersionMenorQue(versionSpringBoot, limite)) {
-            actualizarImportMB(archivoBuildGradle);
-        } 
-        
+//        String versionSpringBoot = identificarVersionSpringBoot(archivoBuildGradle);
+//        String limite = "2.7";
+//        
+//        if (versionSpringBoot != null && esVersionMenorQue(versionSpringBoot, limite)) {
+//            actualizarImportMB(archivoBuildGradle);
+//        } 
     }
     
     public static void actualizarImportMB(File archivoBuildGradle) throws IOException {
@@ -88,7 +91,6 @@ public class TransforBuildGradleService {
             // Verificamos si alguna de las líneas ya existe antes de agregarlas
             flgl1 = contenido.contains("mavenBom \"org.junit:junit-bom:5.8.2\"");
             
-            
             if (!flgl1){
                 contenido = contenido.replace("imports {", "imports {" + lineasAAgregar);
             
@@ -96,8 +98,6 @@ public class TransforBuildGradleService {
             }
         }
     }
-    
-    
     
     public static boolean esVersionMenorQue(String version, String limite) {
         // Dividir las versiones en sus componentes
@@ -136,24 +136,54 @@ public class TransforBuildGradleService {
         return null;
     }
     
-    public static void actualizarDependencias(File archivoBuildGradle) throws IOException {
-        String contenido = new String(Files.readAllBytes(archivoBuildGradle.toPath()));
-        boolean flgl1;
+    public static void actualizarDependencias(File archivoBuildGradle, Parametros param) throws IOException {
+        StringBuilder contenidoActualizado = new StringBuilder();
 
-        if (!contenido.contains("dependencies {")) {
-            Files.write(archivoBuildGradle.toPath(), "\ndependencies {\n    architectureTestImplementation 'cl.bci:lib-architecture-test:1.0.0'\n}\n".getBytes(), StandardOpenOption.APPEND);
-        } else {
-            String lineasAAgregar = "\n architectureTestImplementation 'cl.bci:lib-architecture-test:1.0.0'";
-            
-            flgl1 = contenido.contains("architectureTestImplementation 'cl.bci:lib-architecture-test:1.0.0'");
-            
-            if (!flgl1){
-                contenido = contenido.replace("dependencies {", "dependencies {" + lineasAAgregar);
-            
-                Files.write(archivoBuildGradle.toPath(), contenido.getBytes());
+        try (BufferedReader br = new BufferedReader(new FileReader(archivoBuildGradle))) {
+            String linea;
+            boolean dependenciesEncontradas = false;
+
+            while ((linea = br.readLine()) != null) {
+                contenidoActualizado.append(linea).append("\n");
+
+                if (!dependenciesEncontradas && linea.startsWith("dependencies {")) {
+                    dependenciesEncontradas = true;
+                    
+                    String version = param.getVersion();
+                    
+                    contenidoActualizado.append("    architectureTestImplementation 'cl.bci:lib-architecture-test:"+version+"'\n");
+                }
             }
         }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivoBuildGradle))) {
+            bw.write(contenidoActualizado.toString());
+        }
     }
+    
+    public static void actualizarGenerico(File archivoBuildGradle, String inicio, String agregar) throws IOException {
+        StringBuilder contenidoActualizado = new StringBuilder();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(archivoBuildGradle))) {
+            String linea;
+            boolean dependenciesEncontradas = false;
+
+            while ((linea = br.readLine()) != null) {
+                contenidoActualizado.append(linea).append("\n");
+
+                if (!dependenciesEncontradas && linea.startsWith(inicio)) {
+                    dependenciesEncontradas = true;
+                    contenidoActualizado.append(agregar);
+                }
+            }
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivoBuildGradle))) {
+            bw.write(contenidoActualizado.toString());
+        }
+    }
+    
+    
     
      public static void actualizarConfiguraciones(File archivoBuildGradle) throws IOException {
         String contenido = new String(Files.readAllBytes(archivoBuildGradle.toPath()));
@@ -170,8 +200,7 @@ public class TransforBuildGradleService {
 
         Files.write(archivoBuildGradle.toPath(), contenido.getBytes());
     }
-    
-    
+     
     public static void eliminarComentarios(File archivoBuildGradle) throws IOException {
         StringBuilder contenido = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new FileReader(archivoBuildGradle))) {
@@ -185,13 +214,14 @@ public class TransforBuildGradleService {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(archivoBuildGradle))) {
             bw.write(contenido.toString());
         }
-    }
-    
+    } 
+     
     private static String eliminarComentariosDeLinea(String linea) {
         Pattern patronComentario = Pattern.compile("/\\*.*?\\*/|//.*");
         Matcher matcher = patronComentario.matcher(linea);
         return matcher.replaceAll("");
     }
+    
     
     public static File validarBuildGradle(String rutaCarpeta, String nombreArch) {
         if (rutaCarpeta == null || rutaCarpeta.isEmpty()) {
@@ -204,10 +234,9 @@ public class TransforBuildGradleService {
         File archivoBuildGradle = new File(rutaBuildGradle);
 
         return archivoBuildGradle;
-        
     }
-
-    private boolean modBuildGradle(String ubi) throws IOException {
+    
+    public boolean modBuildGradle(String ubi, Parametros param) throws IOException {
         /*
         MODIFICACIONES BUILD.GRADLE
         */
@@ -231,8 +260,8 @@ public class TransforBuildGradleService {
                
                 
         //agregar los cambios
-        actualizarConfiguraciones(arBuildGradle);
-        actualizarDependencias(arBuildGradle);
+        actualizarGenerico(arBuildGradle, "configurations {", "    architectureTestImplementation.extendsFrom testCompile\n    architectureTestRuntime.extendsFrom testRuntime\n");
+        actualizarDependencias(arBuildGradle, param);
         
         
         //Imports
@@ -247,20 +276,28 @@ public class TransforBuildGradleService {
         */
         
         //Encontrar archivo build.gradle
-        File arBuildGradle = validarBuildGradle(ubi, "test.gradle");
+        String nombreArchivoTest = "test.gradle";
+        File arBuildGradle = validarBuildGradle(ubi, nombreArchivoTest);
         
         if (arBuildGradle.exists()) {
-            System.out.println("El archivo build.gradle existe en la ubicación proporcionada.");
+            System.out.println("El archivo test.gradle existe en la ubicación proporcionada.");
         } else {
-            System.out.println("El archivo build.gradle no existe en la ubicación proporcionada.");
-            return false;
+            System.out.println("El archivo test.gradle no existe, se intentara con tests.gradle.");
+            nombreArchivoTest = "tests.gradle";
+            arBuildGradle = validarBuildGradle(ubi, nombreArchivoTest);
+            if (arBuildGradle.exists()) {
+                System.out.println("El archivo test.gradle existe en la ubicación proporcionada.");
+            } else {
+                System.out.println("El archivo test.gradle no existe en la ubicación proporcionada.");
+                return false;
+            }
         }
         
         //Eliminar comentarios
         eliminarComentarios(arBuildGradle);
-        System.out.println("Se eliminaron los comentarios. test.gradle");
+        System.out.println("Se eliminaron los comentarios. " + nombreArchivoTest);
         
-        taskTestGradle(ubi+"/test.gradle", ubi);
+        taskTestGradle(ubi+"/" + nombreArchivoTest, ubi);
         
         agregarConfiguracionarchitectureTest(arBuildGradle);
         
@@ -321,12 +358,12 @@ public class TransforBuildGradleService {
         for (int i = indiceSourceSets + 1; i < lineas.size(); i++) {
             String linea = lineas.get(i).trim();
             if (linea.equals("}")) {
-                break;  // Fin de la sección sourceSets
+                break;  
             } else if (linea.equals("architectureTest {")) {
-                return true;  // Ya existe la configuración
+                return true;  
             }
         }
-        return false;  // La configuración no existe
+        return false;  
     }
 
     private static void agregarNuevaConfiguracion(List<String> lineas, int indiceSourceSets) {
@@ -371,7 +408,6 @@ public class TransforBuildGradleService {
 
             String paquete = obtenerRutaClaseApplication(ubi2);
             
-            // Verificar si el código ya existe
             String codigoAgregar = "tasks.register('architectureTest', Test) {\n" +
                     "    useJUnitPlatform()\n" +
                     "    environment 'verification_package', '"+paquete+"'\n" +
@@ -387,7 +423,6 @@ public class TransforBuildGradleService {
                 return;
             }
 
-            // Agregar el código al final del archivo
             try (PrintWriter writer = new PrintWriter(new FileWriter(archivoGradle, true))) {
                 writer.println(codigoAgregar);
                 System.out.println("Código agregado con éxito.");
@@ -437,14 +472,22 @@ public class TransforBuildGradleService {
 
     private static String obtenerPaqueteDesdeRuta(String rutaArchivo) {
          File archivo = new File(rutaArchivo);
+         
+         String rutaBase="";
 
         if (!archivo.exists() || !archivo.isFile()) {
             System.out.println("La ruta del archivo no es válida.");
             return null;
         }
 
-        String rutaBase = "src\\main\\java";
+        
+        rutaBase = "src/main/java";
         int indice = rutaArchivo.indexOf(rutaBase);
+        
+        if (indice == -1) {
+            rutaBase = "src\\main\\java";
+            indice = rutaArchivo.indexOf(rutaBase);
+        }
 
         if (indice == -1) {
             System.out.println("La estructura de la ruta no es válida.");
@@ -468,7 +511,7 @@ public class TransforBuildGradleService {
     }
     
     public static void crearClaseSuiteTest(String ubicacion) {
-        String rutaJava = ubicacion + "/java/cl/bci/architecture";
+        String rutaJava = ubicacion + "/architecture-test/java/cl/bci/architecture";
         String rutaClase = rutaJava + "/ArchitectureSuiteTest.java";
 
         // Verificar si la clase ya existe
@@ -477,11 +520,9 @@ public class TransforBuildGradleService {
             return;
         }
 
-        // Crear las carpetas si no existen
         File carpetaJava = new File(rutaJava);
         carpetaJava.mkdirs();
 
-        // Crear la clase
         try (FileWriter writer = new FileWriter(rutaClase)) {
             String contenidoClase = "package cl.bci.architecture;\n\n"
                     + "import org.junit.platform.suite.api.SelectPackages;\n"
@@ -497,5 +538,5 @@ public class TransforBuildGradleService {
             System.err.println("Error al escribir la clase: " + e.getMessage());
         }
     }
-
+    
 }

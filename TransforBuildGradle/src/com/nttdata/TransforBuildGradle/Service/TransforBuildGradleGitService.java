@@ -1,70 +1,95 @@
-
 package com.nttdata.TransforBuildGradle.Service;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import org.eclipse.jgit.api.Git;
+
 
 
 public class TransforBuildGradleGitService {
     
     public static TransforBuildGradleTxtService modelTxt = new TransforBuildGradleTxtService();
+    private static TransforBuildGradleComandService command = new TransforBuildGradleComandService();
 
-    public boolean ClonarRepos(String ubiTxt, String ubi) {
-        boolean respuesta;
+    public int ClonarRepos(String ubiTxt, String ubi, int so) {
+        int  respuesta;
         
-        respuesta = clonarRepositorios(ubiTxt, ubi);
+        respuesta = clonarRepositorios(ubiTxt, ubi, so);
         
         return respuesta;
     }
     
-    public boolean clonarRepositorios(String archivoURLs, String carpetaDestino) {
+    public int clonarRepositorios(String archivoURLs, String carpetaDestino, int so) {
         File archivo = new File(archivoURLs);
-        String pathNewTxt = archivo.getParent();
+        String pathNewTxt = archivo.getParent()+"/ubiRepos.txt";
+        int contador=0;
+        File archivoTxtNew = new File(pathNewTxt);
+
+        // Verificar si el archivo existe
+        if (archivoTxtNew.exists()) {
+            if (archivoTxtNew.delete()) {
+                System.out.println("El archivo ubiRepos ha sido eliminado exitosamente.");
+            } else {
+                System.out.println("No se pudo eliminar el archivo ubiRepos.");
+            }
+        } 
 
         try (BufferedReader lector = new BufferedReader(new FileReader(archivo))) {
             String linea;
             while ((linea = lector.readLine()) != null) {
-                clonarRepositorio(linea, carpetaDestino, pathNewTxt);
+                contador++;
+                clonarRepositorio(linea, carpetaDestino, pathNewTxt, so);
             }
         } catch (IOException e) {
             e.printStackTrace();
-            return false;
+            return 0;
         }
         
-        return true;
+        return contador;
     }
     
-    private static void clonarRepositorio(String urlRepositorio, String carpetaDestino, String pathNewTxt) {
+    private static void clonarRepositorio(String urlRepositorio, String carpetaDestino, String pathNewTxt, int so) {
+        
+        String nombreRepositorio = obtenerNombreRepositorio(urlRepositorio);
+        String rutaDestino = carpetaDestino + "/" + nombreRepositorio;
         try {
-            // Construye la URL de destino
-            String nombreRepositorio = obtenerNombreRepositorio(urlRepositorio);
-            String rutaDestino = carpetaDestino + "/" + nombreRepositorio;
-
-            // Clona el repositorio
-            Git.cloneRepository()
-                    .setURI(urlRepositorio)
-                    .setDirectory(new File(rutaDestino))
-                    .call();
+            
+            command.ejecutarComando("git clone " + urlRepositorio, carpetaDestino, so);
             
             //escribir archivo
-            modelTxt.agregarTexto(pathNewTxt+"/ubiRepos.txt", rutaDestino);
-            
-            System.out.println("Repositorio clonado exitosamente: " + urlRepositorio);
+            String carpetaApp = buscarCarpetaApp(rutaDestino);
+            modelTxt.agregarTexto(pathNewTxt, rutaDestino + "/" + carpetaApp);
             
         } catch (Exception e) {
             System.err.println("Error al clonar el repositorio: " + urlRepositorio);
+            
+            //escribir archivo
+            modelTxt.agregarTexto(pathNewTxt, "xxx"+rutaDestino);
+            
             e.printStackTrace();
         }
     }
     
     private static String obtenerNombreRepositorio(String urlRepositorio) {
-        // Obtiene el nombre del repositorio desde la URL
         String[] partesURL = urlRepositorio.split("/");
         String nombreRepositorioConExtension = partesURL[partesURL.length - 1];
         return nombreRepositorioConExtension.split("\\.")[0];
+    }
+    
+    public static String buscarCarpetaApp(String directorio) {
+        File dir = new File(directorio);
+        
+        if (dir.exists() && dir.isDirectory()) {
+            File[] archivos = dir.listFiles();
+            
+            for (File archivo : archivos) {
+                if (archivo.isDirectory() && archivo.getName().startsWith("app")) {
+                    return archivo.getName();
+                }
+            }
+        }
+        return null;
     }
     
 }

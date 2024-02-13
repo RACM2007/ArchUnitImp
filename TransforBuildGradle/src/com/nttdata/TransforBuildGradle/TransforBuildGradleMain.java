@@ -6,6 +6,8 @@ import com.nttdata.TransforBuildGradle.Service.TransforBuildGradleResultService;
 import com.nttdata.TransforBuildGradle.Service.TransforBuildGradleService;
 import com.nttdata.TransforBuildGradle.Util.TransforBuildGradleUtil;
 import com.nttdata.TransforBuildGradle.View.TransforBuildGradleView;
+import com.nttdata.TransforBuildGradle.model.Parametros;
+import com.nttdata.TransforBuildGradle.model.Resultados;
 import java.io.File;
 import java.io.IOException;
 
@@ -22,25 +24,33 @@ public class TransforBuildGradleMain {
         String ubi;
         String ubiTxt;
         boolean respuesta= false;
+        int totRepos=0;
+        Parametros param;
         
         //Pedir Archivo txt, lista repos
         ubiTxt = util.pedirUbicacionArchivo("Seleccione la ubicación del archivo de repositorios");
         
-        
         //Pedir ubicación para guardar repos
         ubi = util.pedirUbicacionCarpeta("Seleccione la ubicación para guardar los proyectos");
-         
+        
+        //Cargar Parámetros
+        param = new Parametros(0);
+        
         //realizar el clonado de repos y escribir txt
-        respuesta = modelGit.ClonarRepos(ubiTxt, ubi);
+        totRepos = modelGit.ClonarRepos(ubiTxt, ubi, param.getSO());
         
         //Implementar y ejecutar archunit a cada repo
-        if (respuesta)
-            respuesta = model.procesar(new File(ubiTxt).getParent()+"/ubiRepos.txt");
+        if (totRepos > 0)
+            respuesta = model.procesar(new File(ubiTxt).getParent()+"/ubiRepos.txt", param);
         
-//        //Mostrar resultados
-//        if (respuesta)
-//        respuesta= modelRes.MostrarResultados(ubi);
+        Resultados resu = modelRes.CrearResultados(new File(ubiTxt).getParent()+"/ubiRepos.txt", totRepos);
         
+        //Mostrar resultados
+        if (respuesta) {
+            modelRes.crearExcelResultados(resu);
+            respuesta= modelRes.MostrarResultados(new File(ubiTxt).getParent()+"/ubiRepos.txt");
+        }
+            
         //Proceso Terminado
         if (respuesta) {
             view.mostrarMensaje("El proceso ha finalizado exitosamente");

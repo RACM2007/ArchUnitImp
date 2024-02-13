@@ -11,9 +11,7 @@ public class TransforBuildGradleView {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         fileChooser.setDialogTitle(mensaje);
-
-        fileChooser.setCurrentDirectory(new File("C:\\"));
-
+        
         int seleccion = fileChooser.showOpenDialog(null);
         if (seleccion == JFileChooser.APPROVE_OPTION) {
             File carpetaSeleccionada = fileChooser.getSelectedFile();

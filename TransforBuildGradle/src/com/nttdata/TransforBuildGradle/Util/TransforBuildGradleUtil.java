@@ -42,5 +42,18 @@ public class TransforBuildGradleUtil {
         System.exit(0);
     }
     
+    public static int obtenerSistemaOperativo() {
+        String sistemaOperativo = System.getProperty("os.name").toLowerCase();
+        
+        if (sistemaOperativo.contains("win")) {
+            return 1;
+        } else {
+            if (sistemaOperativo.contains("mac")) {
+                return 2;
+            }else{
+                return 3;
+            }
+        }
+    }
     
 }

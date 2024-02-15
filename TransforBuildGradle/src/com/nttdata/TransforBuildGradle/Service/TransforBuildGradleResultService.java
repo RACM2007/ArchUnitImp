@@ -339,20 +339,14 @@ public class TransforBuildGradleResultService {
         
     }
 
-    private String obtenerNombreapp(String linea) {
-        
-//        String[] partesRuta = linea.split("[\\\\/]");
-//        String nombreUltimaCarpeta = partesRuta[partesRuta.length - 1];
-//
-//        return nombreUltimaCarpeta;
+    private String obtenerNombreapp(String ruta) {
 
-        String[] carpetas = linea.split("/");
-        for (int i = 0; i < carpetas.length; i++) {
-            if (carpetas[i].equals("app") && i > 0) {
-                return carpetas[i - 1];
-            }
+        String[] segmentos = ruta.split("/");
+        if (segmentos.length >= 2) {
+            return segmentos[segmentos.length - 2];
+        } else {
+            return ""; 
         }
-        return null;
         
     }
 

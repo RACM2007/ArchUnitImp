@@ -15,19 +15,13 @@ public class TransforBuildGradlePruebas {
     
     
 
-    public static void main(String[] args) {
-        String ruta = "C://src/tat/queso/null";
-        String nombreCarpetaAnterior = obtenerCarpetaAnterior(ruta);
-        System.out.println("Carpeta anterior: " + nombreCarpetaAnterior);
+    public static void main(String[] args) throws IOException {
+        String ruta = "C://Archivos Prueba";
+       obtenerCarpetaAnterior(ruta);
     }
 
-    public static String obtenerCarpetaAnterior(String ruta) {
-        String[] segmentos = ruta.split("/");
-        if (segmentos.length >= 2) {
-            return segmentos[segmentos.length - 2];
-        } else {
-            return ""; // O manejar el caso en el que no haya suficientes segmentos
-        }
+    public static void obtenerCarpetaAnterior(String ruta) throws IOException {
+        modelTxt.modTestGradle(ruta);
     }
     
 }

@@ -299,7 +299,7 @@ public class TransforBuildGradleService {
         return true;
     }
 
-    private boolean modTestGradle(String ubi) throws IOException {
+    public boolean modTestGradle(String ubi) throws IOException {
         /*
         MODIFICACIONES test.GRADLE
         */
@@ -437,6 +437,8 @@ public class TransforBuildGradleService {
 
             String paquete = obtenerRutaClaseApplication(ubi2);
             
+            String codigoAgregarVal = "tasks.register('architectureTest', Test) {";
+            
             String codigoAgregar = "tasks.register('architectureTest', Test) {\n" +
                     "    useJUnitPlatform()\n" +
                     "    environment 'verification_package', '"+paquete+"'\n" +
@@ -447,7 +449,7 @@ public class TransforBuildGradleService {
                     "    classpath = sourceSets.architectureTest.runtimeClasspath\n" +
                     "}\n";
 
-            if (contenido.toString().contains(codigoAgregar)) {
+            if (contenido.toString().contains(codigoAgregarVal)) {
                 System.out.println("El código ya existe en el archivo.");
                 return;
             }
